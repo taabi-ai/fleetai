@@ -1,0 +1,38 @@
+name: Synthetic
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  smoke:
+    name: Synthetic smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Gateway health
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$GATEWAY_URL/api/health")
+          echo "gateway_health=$code"
+          [ "$code" = "200" ] || { echo "gateway unhealthy"; exit 1; }
+
+      - name: Dashboard read (synthetic)
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$GATEWAY_URL/api/widgets/data" \
+            -H 'content-type: application/json' \
+            -d '{"config":{"type":"kpi_card","title":"Synthetic","dataSource":"fleet","metric":"active_vehicles","params":{}}}')
+          echo "widget_data=$code"
+          [ "$code" = "200" ] && exit 0 || exit 1
+        env:
+          GATEWAY_URL: ${{ secrets.GATEWAY_URL }}

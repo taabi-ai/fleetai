@@ -1,0 +1,5 @@
+apiVersion: v2
+name: fleetai-service
+description: Library chart that renders a FleetAI service Deployment/Service/ServiceMonitor + optional KEDA ScaledObject and migration Job.
+type: library
+version: 1.0.0

@@ -1,0 +1,523 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/fleetai_dash/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  aiPin         String?
+  role          String    @default("user")
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  dashboards    Dashboard[]
+  lockedWidgets Widget[]  @relation("WidgetLocks")
+  libraryWidgets LibraryWidget[]
+  notifications  Notification[]
+  sharesReceived DashboardShare[] @relation("ShareTo")
+  sharesSent     DashboardShare[] @relation("ShareBy")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Dashboard {
+  id        String   @id @default(cuid())
+  userId    String
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  cloneCount  Int      @default(0)
+  sourceId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  widgets     Widget[]
+  shares      DashboardShare[]
+
+  @@index([userId])
+  @@index([isPublished])
+}
+
+model Widget {
+  id           String   @id @default(cuid())
+  dashboardId  String
+  widgetConfig Json
+  gridPos      Json
+  lockedById   String?
+  lockedAt     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  dashboard    Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  lockedBy     User?     @relation("WidgetLocks", fields: [lockedById], references: [id], onDelete: SetNull)
+
+  @@index([dashboardId])
+}
+
+model LibraryWidget {
+  id           String   @id @default(cuid())
+  ownerId      String
+  title        String
+  description  String?
+  widgetConfig Json
+  gridPos      Json
+  useCount     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
+
+model DashboardShare {
+  id          String    @id @default(cuid())
+  dashboardId String
+  userId      String
+  sharedById  String
+  createdAt   DateTime  @default(now())
+  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  user        User      @relation("ShareTo", fields: [userId], references: [id], onDelete: Cascade)
+  sharedBy    User      @relation("ShareBy", fields: [sharedById], references: [id], onDelete: Cascade)
+
+  @@unique([dashboardId, userId])
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   @default("info")
+  title     String
+  message   String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
+
+model McpServer {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  description String?
+  authToken   String?
+  category    String   @default("general") // general | crm | dtwin | analytics | devops | other
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LlmProvider {
+  id        String   @id @default(cuid())
+  name      String
+  kind      String   @default("openai")
+  baseUrl   String
+  apiKey    String?
+  model     String
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SmtpSetting {
+  id        String   @id @default("default")
+  host      String
+  port      Int      @default(587)
+  secure    Boolean  @default(false)
+  username  String?
+  password  String?
+  fromEmail String
+  fromName  String?
+  replyTo   String?
+  updatedAt DateTime @updatedAt
+}
+
+model MenuItem {
+  id         String   @id @default(cuid())
+  label      String
+  path       String
+  icon       String?
+  order      Int      @default(0)
+  roles      String[] @default([])
+  isActive   Boolean  @default(true)
+  isExternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+/// RBAC: a named role with a set of permission keys (see lib/rbac.ts for the catalog).
+model Role {
+  name        String   @id
+  label       String
+  description String?
+  permissions String[] @default([])
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Super-admin managed third-party integrations (New Relic RUM, Plane.so, Jira, ...). `config` holds provider-specific fields.
+model IntegrationSetting {
+  key         String   @id
+  enabled     Boolean  @default(false)
+  config      Json     @default("{}")
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
+/// Engineering telemetry used for DORA metrics (deployments & incidents posted by CI/CD or monitoring webhooks).
+model DoraEvent {
+  id         String   @id @default(cuid())
+  type       String   // deployment | incident_opened | incident_resolved
+  service    String   @default("fleetai-dash")
+  env        String   @default("production")
+  status     String   @default("success") // success | failure
+  ref        String?  // commit sha / tag / PR
+  incidentId String?
+  leadTimeMin Int?    // minutes from first commit to deploy, if the CI provides it
+  occurredAt DateTime @default(now())
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([type, occurredAt])
+  @@index([service, env, occurredAt])
+}
+
+/// Immutable platform-wide audit trail. One row per mutating request / auth event / system action.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String?
+  actorRole  String?
+  action     String   // e.g. widget.update, user.create, auth.login
+  entity     String   // e.g. widget, dashboard, user, auth
+  entityId   String?
+  summary    String
+  method     String?
+  path       String?
+  status     Int?
+  ip         String?
+  userAgent  String?
+  payload    Json?    // sanitised request body (secrets redacted)
+  result     Json?    // small response excerpt / before-after snapshot
+  durationMs Int?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([entity, entityId])
+}
+
+/// One row per LLM call made on behalf of a user.
+model LlmUsage {
+  id               String   @id @default(cuid())
+  userId           String
+  providerId       String?
+  providerName     String
+  model            String
+  feature          String   @default("generate") // generate | edit
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  estimated        Boolean  @default(false)
+  success          Boolean  @default(true)
+  durationMs       Int?
+  createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+/// Per-user token quota. Null monthlyLimit = platform default (PlatformSetting llm.defaultMonthlyTokens).
+model UserQuota {
+  userId        String   @id
+  monthlyLimit  Int?
+  bonusTokens   Int      @default(0)   // extra credits granted by admins (added to the current month)
+  bonusMonth    String?                // YYYY-MM the bonus applies to; reset when the month changes
+  hardLimit     Boolean  @default(true) // block calls when exceeded (false = warn only)
+  note          String?
+  updatedById   String?
+  updatedAt     DateTime @updatedAt
+}
+
+model CreditRequest {
+  id           String   @id @default(cuid())
+  userId       String
+  tokens       Int
+  reason       String?
+  status       String   @default("pending") // pending | approved | rejected
+  reviewedById String?
+  reviewNote   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+}
+
+/// Generic key/value platform settings (JSON values).
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+/// Environment variable overrides managed from the admin console (read through lib/env.ts).
+model EnvVar {
+  key         String   @id
+  value       String
+  isSecret    Boolean  @default(true)
+  description String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Files stored in the S3-compatible object store (MinIO / AWS S3 / Backblaze B2).
+model MediaAsset {
+  id               String   @id @default(cuid())
+  kind             String   @default("document") // video | image | document | other
+  title            String
+  fileName         String
+  contentType      String
+  size             Int      @default(0)
+  cloud_storage_path String @unique
+  isPublic         Boolean  @default(false)
+  folder           String   @default("general")
+  durationSec      Int?
+  uploadedById     String?
+  createdAt        DateTime @default(now())
+
+  @@index([kind, createdAt])
+  @@index([folder])
+}
+
+model TrainingModule {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String?
+  audience    String   @default("customer") // internal | customer | both
+  level       String   @default("beginner")
+  order       Int      @default(0)
+  isPublished Boolean  @default(false)
+  coverAssetId String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lessons     TrainingLesson[]
+}
+
+model TrainingLesson {
+  id           String   @id @default(cuid())
+  moduleId     String
+  module       TrainingModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  order        Int      @default(0)
+  videoAssetId String?
+  videoUrl     String?  // external URL alternative (YouTube/Vimeo/MP4)
+  durationSec  Int?
+  chapters     Json?    // [{ t: seconds, title }]
+  notes        String?  // markdown-ish text shown under the player
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  progress     TrainingProgress[]
+
+  @@index([moduleId, order])
+}
+
+model TrainingProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  lesson      TrainingLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  positionSec Int      @default(0)
+  completed   Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+// ===================== FLEET DOMAIN (dashboard data source) =====================
+// These tables hold the operational fleet data that powers every dashboard widget.
+// Populated by scripts/seed.ts. All widget metrics are aggregated from these tables
+// (see lib/mock-data.ts) instead of being randomly generated.
+
+model Driver {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  safetyScore Int      @default(80)
+  trips       Int      @default(0)
+  violations  Int      @default(0)
+  onTimeRate  Int      @default(90)
+  createdAt   DateTime @default(now())
+}
+
+model Route {
+  id           String @id @default(cuid())
+  fromCity     String
+  toCity       String
+  distanceKm   Int
+  avgTimeHours Int    @default(0)
+  tripCount    Int    @default(0)
+
+  @@unique([fromCity, toCity])
+}
+
+model Vehicle {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  type         String
+  status       String
+  isEv         Boolean  @default(false)
+  fuelLevel    Int      @default(0)
+  speed        Int      @default(0)
+  efficiency   Float    @default(0)
+  totalFuelL   Int      @default(0)
+  soc          Int?
+  rangeKm      Int?
+  evDistanceKm Int?
+  evEnergyKwh  Int?
+  driverName   String?
+  cityName     String
+  lat          Float
+  lng          Float
+  lastSeenAt   DateTime @default(now())
+
+  @@index([status])
+  @@index([type])
+  @@index([isEv])
+}
+
+model Trip {
+  id            String   @id @default(cuid())
+  vehicleCode   String?
+  driverName    String?
+  routeLabel    String?
+  carrier       String
+  region        String
+  status        String
+  costInr       Int      @default(0)
+  deliveryHours Int?
+  onTime        Boolean  @default(true)
+  occurredAt    DateTime @default(now())
+
+  @@index([status])
+  @@index([region])
+  @@index([carrier])
+  @@index([occurredAt])
+}
+
+model AdasEvent {
+  id          String   @id @default(cuid())
+  vehicleCode String?
+  driverName  String?
+  type        String
+  severity    String
+  occurredAt  DateTime @default(now())
+
+  @@index([type])
+  @@index([driverName])
+  @@index([severity])
+}
+
+model ChargingSession {
+  id          String   @id @default(cuid())
+  vehicleCode String
+  depot       String
+  durationMin Int
+  energyKwh   Int
+  startTime   DateTime @default(now())
+
+  @@index([startTime])
+}
+
+model FleetAlert {
+  id          String   @id @default(cuid())
+  code        String
+  vehicleCode String?
+  type        String
+  severity    String?
+  cityName    String?
+  dropPct     Int?
+  occurredAt  DateTime @default(now())
+
+  @@index([type])
+  @@index([occurredAt])
+}
+
+model DailyStat {
+  id                   String   @id @default(cuid())
+  day                  DateTime @unique
+  utilizationPct       Int      @default(0)
+  fuelConsumptionL     Int      @default(0)
+  fuelIdleHours        Int      @default(0)
+  fuelWasteL           Int      @default(0)
+  avgFuelLevel         Int      @default(0)
+  onTimeRate           Int      @default(0)
+  avgDeliveryHours     Int      @default(0)
+  tmsCompleted         Int      @default(0)
+  tmsPending           Int      @default(0)
+  adasHarshBraking     Int      @default(0)
+  adasLaneDeparture    Int      @default(0)
+  adasCollisionWarning Int      @default(0)
+  adasSpeeding         Int      @default(0)
+  adasFatigue          Int      @default(0)
+  safetyScore          Int      @default(0)
+  avgSoc               Int      @default(0)
+
+  @@index([day])
+}

@@ -1,0 +1,38 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "title": "Kafka / Outbox",
+  "uid": "kafka-outbox",
+  "version": 1,
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "group",
+        "type": "query",
+        "query": { "query": "label_values(kafka_consumer_lag, group)" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Consumer lag by group",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "kafka_consumer_lag{group=~\"$group\"}", "legendFormat": "{{group}} {{topic}}" }]
+    },
+    {
+      "title": "Outbox backlog per service",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{ "expr": "outbox_pending_total", "legendFormat": "{{service}}" }]
+    },
+    {
+      "title": "DLQ messages",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "targets": [{ "expr": "sum(increase(kafka_dlq_messages_total[5m])) by (topic)", "legendFormat": "{{topic}}" }]
+    }
+  ]
+}

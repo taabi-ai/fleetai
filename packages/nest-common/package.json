@@ -1,0 +1,25 @@
+{
+  "name": "@fleetai/nest-common",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@fleetai/config": "workspace:*",
+    "@fleetai/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@fleetai/tsconfig": "workspace:*",
+    "@types/node": "^26.5.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0",
+    "zod": "^4.6.5"
+  }
+}

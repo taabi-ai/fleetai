@@ -1,0 +1,28 @@
+# Copy to repo root as .claudeignore / .clineignore / .opencodeignore (same syntax as .gitignore)
+# Keeps the agent's index small: prompts name the exact legacy files to open.
+
+node_modules/
+.pnpm-store/
+.turbo/
+dist/
+.next/
+coverage/
+playwright-report/
+test-results/
+
+# legacy monolith: read on demand only
+legacy/**/node_modules/
+legacy/**/.next/
+legacy/**/.build/
+legacy/**/public/
+legacy/**/components/ui/
+legacy/**/*.pdf
+legacy/**/*.docx
+legacy/**/*.png
+legacy/**/*.mp4
+legacy/**/tests/
+
+# generated
+**/prisma/generated/
+**/openapi.generated.json
+**/*.lock

@@ -1,0 +1,15 @@
+{
+  "name": "@fleetai/eslint-config",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "echo ok"
+  },
+  "devDependencies": {
+    "eslint": "^10.10.0",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,25 @@
+# .clinerules — FleetAI Platform monorepo (Cline / Roo Code)
+
+Read AGENTS.md in the repository root before any task. All rules there apply verbatim.
+
+Workflow
+- Always start in Plan mode. Summarise: files you will read, files you will create/modify, commands you will run. Switch to Act only after the plan matches the prompt's deliverables list.
+- One prompt = one branch (name given in the prompt). Never work on main.
+- Open only the legacy files the prompt lists (legacy/fleetai_dash/nextjs_space/...). Do not scan the whole legacy folder.
+- Never edit, import from, or run anything inside legacy/.
+
+Stack guardrails (hard stops — ask before deviating)
+- pnpm only (no npm/yarn/bun). NestJS 11 + Fastify for services. Prisma 6 per service. Zod contracts. kafkajs for Redpanda. @aws-sdk/client-s3 for MinIO. Vitest/Playwright/k6 for tests. TypeScript only — no Python.
+- One database per service. No cross-database access.
+- Writes publish via @fleetai/outbox. Mutations use @Audited(). Config via @fleetai/config getEnv().
+
+Quality gates before saying "done"
+- Run the acceptance commands at the end of the prompt and show real output.
+- pnpm turbo run lint typecheck test must pass for affected workspaces.
+- Update docs/migration/06-REFERENCE/* when adding endpoints, tables, events or env vars.
+- Deliver the completion report using the template at the end of the prompt.
+
+Safety
+- Never print .env contents or secret values in the terminal.
+- Never run prisma migrate reset / db push --force-reset against anything but a local docker database.
+- Do not delete or rewrite files outside the prompt's scope.

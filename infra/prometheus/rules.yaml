@@ -1,0 +1,106 @@
+# infra/prometheus/rules.yaml — SLOs and alert rules for FleetAI Platform.
+# Alerts reference the runbooks in docs/runbooks/ (same alert name).
+
+groups:
+  - name: fleetai-slos
+    rules:
+      # Availability SLO: 99.9% over 30d -> burn rate alerts (multi-window).
+      - record: gateway:requests_total:rate5m
+        expr: sum(rate(http_requests_total{service="gateway"}[5m]))
+      - record: gateway:errors_total:rate5m
+        expr: sum(rate(http_requests_total{service="gateway",status=~"5.."}[5m]))
+      - record: gateway:availability:5m
+        expr: 1 - (gateway:errors_total:rate5m / clamp_min(gateway:requests_total:rate5m, 1))
+
+      - alert: GatewayAvailabilityPageBurn
+        expr: (1 - gateway:availability:5m) > (0.001 * 14.4)
+        for: 15m
+        labels: { severity: page, service: gateway }
+        annotations:
+          summary: Gateway availability burning at page rate
+          runbook: docs/runbooks/gateway-availability.md
+
+      - alert: GatewayAvailabilityTicketBurn
+        expr: (1 - gateway:availability:5m) > (0.001 * 3)
+        for: 2h
+        labels: { severity: ticket, service: gateway }
+        annotations:
+          summary: Gateway availability burning at ticket rate
+          runbook: docs/runbooks/gateway-availability.md
+
+  - name: fleetai-latency
+    rules:
+      # p95 < 500ms read routes (widget data, dashboards); ingest p95 < 200ms.
+      - alert: ReadPathP95High
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{route=~"/api/widgets/data|/api/dashboard.*"}[5m])) > 0.5
+        for: 10m
+        labels: { severity: ticket, service: gateway }
+        annotations:
+          summary: Read path p95 exceeded 500ms
+          runbook: docs/runbooks/read-path-latency.md
+
+      - alert: IngestP95High
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{service="ingest-api"}[5m])) > 0.2
+        for: 10m
+        labels: { severity: ticket, service: ingest-api }
+        annotations:
+          summary: Ingest p95 exceeded 200ms
+          runbook: docs/runbooks/ingest-latency.md
+
+  - name: fleetai-queues
+    rules:
+      - record: fleetai:consumer_lag_max
+        expr: max(kafka_consumer_lag) by (group)
+      - record: fleetai:outbox_oldest_unsent
+        expr: max(time() - outbox_published_at_seconds) by (service)
+
+      - alert: ConsumerLagHigh
+        expr: fleetai:consumer_lag_max > 60
+        for: 5m
+        labels: { severity: ticket }
+        annotations:
+          summary: Kafka consumer lag > 60s for {{ $labels.group }}
+          runbook: docs/runbooks/consumer-lag.md
+
+      - alert: OutboxBacklog
+        expr: fleetai:outbox_oldest_unsent > 30
+        for: 5m
+        labels: { severity: ticket }
+        annotations:
+          summary: Outbox oldest unsent event > 30s for {{ $labels.service }}
+          runbook: docs/runbooks/outbox-backlog.md
+
+      - alert: DlqMessages
+        expr: sum(increase(kafka_dlq_messages_total[10m])) > 0
+        labels: { severity: ticket }
+        annotations:
+          summary: Dead-letter queue received messages
+          runbook: docs/runbooks/dead-letter-queue.md
+
+  - name: fleetai-database
+    rules:
+      - alert: DatabaseConnectionsHigh
+        expr: avg(pg_stat_activity_count / pg_settings_max_connections) > 0.8
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: PostgreSQL connections above 80% of max
+          runbook: docs/runbooks/database-connections.md
+
+      - alert: SlowQueries
+        expr: rate(pg_stat_statements_total_ms{mean_ms>1000}[5m]) > 10
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: Slow PostgreSQL queries detected
+          runbook: docs/runbooks/database-slow-queries.md
+
+  - name: fleetai-infra
+    rules:
+      - alert: PodRestarts
+        expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+        for: 15m
+        labels: { severity: page }
+        annotations:
+          summary: Pod restart loop detected for {{ $labels.pod }}
+          runbook: docs/runbooks/pod-restarts.md

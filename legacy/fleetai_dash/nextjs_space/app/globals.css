@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 29 92% 54%;
+    --primary-foreground: 24 40% 8%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 222 47% 15%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 9% 42%;
+    --accent: 220 14% 91%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 87%;
+    --input: 220 13% 85%;
+    --ring: 29 92% 54%;
+    --radius: 0.625rem;
+    --chart-1: 29 92% 54%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 217 91% 60%;
+    --shadow-sm: 0 1px 2px rgba(15,23,42,0.08);
+    --shadow-md: 0 4px 12px rgba(15,23,42,0.10);
+    --shadow-lg: 0 8px 24px rgba(15,23,42,0.14);
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 350ms;
+  }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 95%;
+    --card: 222 40% 10%;
+    --card-foreground: 210 40% 95%;
+    --popover: 222 40% 10%;
+    --popover-foreground: 210 40% 95%;
+    --primary: 29 92% 54%;
+    --primary-foreground: 24 40% 8%;
+    --secondary: 222 30% 16%;
+    --secondary-foreground: 210 40% 90%;
+    --muted: 222 30% 14%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 222 30% 18%;
+    --accent-foreground: 210 40% 95%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 20% 18%;
+    --input: 222 20% 18%;
+    --ring: 29 92% 54%;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+}
+
+/* React Grid Layout styles */
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+.react-grid-item.resizing {
+  z-index: 1;
+  will-change: width, height;
+  opacity: 0.9;
+}
+.react-grid-item.react-draggable-dragging {
+  z-index: 3;
+  will-change: transform;
+  opacity: 0.8;
+}
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+.react-grid-item > .react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid hsl(var(--foreground) / 0.25);
+  border-bottom: 2px solid hsl(var(--foreground) / 0.25);
+}
+.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.15);
+  border: 2px dashed hsl(var(--primary) / 0.4);
+  border-radius: 0.75rem;
+  opacity: 1;
+  transition-duration: 100ms;
+  z-index: 2;
+}
+
+/* Leaflet fix */
+.leaflet-container { background: hsl(var(--card)); border-radius: 0.5rem; z-index: 1; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--foreground) / 0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--foreground) / 0.35); }
+
+/* Floating AI launcher */
+@keyframes ai-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes ai-glow {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.12); }
+}
+@keyframes ai-sparkle {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  30% { transform: rotate(-12deg) scale(1.12); }
+  60% { transform: rotate(10deg) scale(1.05); }
+}
+@keyframes ai-hint-in {
+  from { opacity: 0; transform: translate(8px, -50%); }
+  to { opacity: 1; transform: translate(0, -50%); }
+}
+.ai-launcher { animation: ai-float 3.2s ease-in-out infinite; }
+.ai-launcher-glow { animation: ai-glow 2.4s ease-in-out infinite; }
+.ai-launcher-icon { animation: ai-sparkle 2.8s ease-in-out infinite; }
+.ai-launcher-hint { animation: ai-hint-in 0.4s ease-out 0.6s both; }
+@media (max-width: 640px) { .ai-launcher-hint { display: none; } }
+
+/* Locked widget */
+.react-grid-item.static .widget-shell { cursor: default; }
+
+/* Hero gradient for auth */
+.hero-gradient {
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--primary) / 0.14) 50%, hsl(var(--background)) 100%);
+}
+/* Light theme: the design uses translucent-white surfaces/borders tuned for dark backgrounds.
+   Remap them to foreground-tinted equivalents so they stay visible on light backgrounds. */
+:root:not(.dark) .border-white\/5,  :root:not(.dark) .divide-white\/5 > :not([hidden]) ~ :not([hidden]) { border-color: hsl(var(--foreground) / 0.08); }
+:root:not(.dark) .border-white\/10 { border-color: hsl(var(--foreground) / 0.12); }
+:root:not(.dark) .border-white\/15 { border-color: hsl(var(--foreground) / 0.16); }
+:root:not(.dark) .border-white\/20 { border-color: hsl(var(--foreground) / 0.22); }
+:root:not(.dark) .hover\:border-white\/30:hover { border-color: hsl(var(--foreground) / 0.3); }
+:root:not(.dark) .hover\:border-white\/40:hover { border-color: hsl(var(--foreground) / 0.4); }
+:root:not(.dark) .bg-white\/5  { background-color: hsl(var(--foreground) / 0.04); }
+:root:not(.dark) .bg-white\/10 { background-color: hsl(var(--foreground) / 0.07); }
+:root:not(.dark) .hover\:bg-white\/5:hover  { background-color: hsl(var(--foreground) / 0.05); }
+:root:not(.dark) .hover\:bg-white\/10:hover { background-color: hsl(var(--foreground) / 0.08); }
+:root:not(.dark) .hover\:bg-white\/15:hover { background-color: hsl(var(--foreground) / 0.11); }
+:root:not(.dark) .hover\:bg-white\/25:hover { background-color: hsl(var(--foreground) / 0.16); }
+:root:not(.dark) .ring-white\/50 { --tw-ring-color: hsl(var(--foreground) / 0.4); }
+:root:not(.dark) .text-gray-900 { color: hsl(var(--foreground)); }
+
+/* Leaflet popups follow the app theme */
+.custom-popup .leaflet-popup-content-wrapper { background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); border: 1px solid hsl(var(--border)); border-radius: 10px; box-shadow: var(--shadow-md); padding: 0; }
+.custom-popup .leaflet-popup-content { margin: 0; }
+.custom-popup .leaflet-popup-tip { background: hsl(var(--popover)); }
+.custom-popup .leaflet-popup-close-button { color: hsl(var(--muted-foreground)); }
+
+/* Map tiles: OpenStreetMap (no API key). Dark theme inverts the raster to match the UI. */
+.fleet-tiles-dark { filter: invert(1) hue-rotate(190deg) brightness(0.8) contrast(0.9) saturate(0.6); }
+.fleet-tiles-light { filter: saturate(0.85); }
+
+/* Light theme: pastel status text (tuned for dark surfaces) is darkened to keep AA contrast */
+:root:not(.dark) .text-emerald-300, :root:not(.dark) .text-emerald-400 { color: #047857; }
+:root:not(.dark) .text-teal-300,    :root:not(.dark) .text-teal-400    { color: #0f766e; }
+:root:not(.dark) .text-amber-300,   :root:not(.dark) .text-amber-400   { color: #b45309; }
+:root:not(.dark) .text-red-300,     :root:not(.dark) .text-red-400     { color: #b91c1c; }
+:root:not(.dark) .text-orange-400 { color: #c2410c; }
+:root:not(.dark) .text-blue-400   { color: #1d4ed8; }

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fleetai.fullname" . }}
+  labels: {{ include "fleetai.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas.min | default 1 }}
+  selector:
+    matchLabels: {{ include "fleetai.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "fleetai.selectorLabels" . | nindent 8 }}
+    spec:
+      imagePullSecrets: {{ toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      containers:
+        - name: {{ .Values.name }}
+          image: "{{ .Values.global.imageRegistry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          command: {{ toYaml .Values.command | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+          env:
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.global.otel.endpoint | quote }}
+            - name: OTEL_TRACES_SAMPLER
+              value: parentbased_traceidratio
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.global.otel.samplingRatio | default 0.1 | quote }}
+          envFrom:
+            {{- range .Values.envFromSecrets }}
+            - secretRef: { name: {{ . }} }
+            {{- end }}
+          resources:
+            requests: {{ toYaml .Values.resources.requests | nindent 14 }}
+            limits: {{ toYaml .Values.resources.limits | nindent 14 }}
+          readinessProbe:
+            httpGet: { path: {{ .Values.probes.readiness.path | default "/health/ready" }}, port: http }
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds | default 15 }}
+          livenessProbe:
+            httpGet: { path: {{ .Values.probes.liveness.path | default "/health/live" }}, port: http }
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds | default 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "fleetai.fullname" . }}
+  labels: {{ include "fleetai.labels" . | nindent 4 }}
+spec:
+  selector: {{ include "fleetai.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.port }}
+      targetPort: http

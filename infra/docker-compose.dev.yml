@@ -1,0 +1,128 @@
+# infra/docker-compose.dev.yml — local development stack for the FleetAI platform
+# Usage: pnpm infra:up  (docker compose -f infra/docker-compose.dev.yml up -d)
+# Profiles: default = core infra; `--profile cdc` adds Debezium; `--profile apps` runs built service images.
+
+name: fleetai
+
+x-healthy: &healthy
+  interval: 5s
+  timeout: 3s
+  retries: 20
+
+services:
+  postgres:
+    # TimescaleDB on PG17 (needed by fleet-metrics). pgmq is installed by init.sql where available;
+    # @fleetai/queue falls back to the SKIP LOCKED shim when the extension is missing.
+    image: timescale/timescaledb-ha:pg17
+    environment:
+      POSTGRES_USER: fleetai
+      POSTGRES_PASSWORD: fleetai
+      POSTGRES_DB: postgres
+    command: >
+      postgres -c shared_preload_libraries=timescaledb,pg_stat_statements
+               -c max_connections=200 -c wal_level=logical
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/home/postgres/pgdata/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fleetai"]
+      <<: *healthy
+
+  redpanda:
+    image: redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda start
+      - --smp 1 --memory 1G --overprovisioned --node-id 0
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --pandaproxy-addr 0.0.0.0:8082 --advertise-pandaproxy-addr localhost:8082
+      - --schema-registry-addr 0.0.0.0:8081
+    ports: ["9092:9092", "8081:8081", "8082:8082", "9644:9644"]
+    volumes: [redpanda:/var/lib/redpanda/data]
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      <<: *healthy
+
+  redpanda-console:
+    image: redpandadata/console:v2.7.2
+    environment:
+      KAFKA_BROKERS: redpanda:29092
+      SCHEMAREGISTRY_ENABLED: "true"
+      SCHEMAREGISTRY_URLS: http://redpanda:8081
+    ports: ["8080:8080"]
+    depends_on: { redpanda: { condition: service_healthy } }
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports: ["6379:6379"]
+    volumes: [redis:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      <<: *healthy
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: fleetai
+      MINIO_ROOT_PASSWORD: fleetai-dev-secret
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [minio:/data]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      <<: *healthy
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    entrypoint: ["/bin/sh", "/scripts/bootstrap.sh"]
+    environment:
+      MINIO_URL: http://minio:9000
+      MINIO_ROOT_USER: fleetai
+      MINIO_ROOT_PASSWORD: fleetai-dev-secret
+    volumes: [./minio:/scripts:ro]
+    depends_on: { minio: { condition: service_healthy } }
+    restart: "no"
+
+  otel-collector:
+    image: grafana/otel-lgtm:latest
+    ports: ["3001:3000", "4317:4317", "4318:4318", "9090:9090"]
+    volumes:
+      - ./grafana/dashboards:/otel-lgtm/grafana/dashboards:ro
+      - ./grafana/provisioning:/otel-lgtm/grafana/provisioning/dashboards:ro
+      - ./prometheus/rules.yaml:/otel-lgtm/prometheus-rules.yaml:ro
+    environment:
+      ENABLE_LOGS_ALL: "true"
+
+  # ---------- optional: change data capture for backfill/dual-write phase ----------
+  debezium:
+    profiles: [cdc]
+    image: debezium/connect:2.7
+    environment:
+      BOOTSTRAP_SERVERS: redpanda:29092
+      GROUP_ID: cdc
+      CONFIG_STORAGE_TOPIC: _cdc_configs
+      OFFSET_STORAGE_TOPIC: _cdc_offsets
+      STATUS_STORAGE_TOPIC: _cdc_status
+    ports: ["8083:8083"]
+    depends_on:
+      redpanda: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+
+  # ---------- optional: run the legacy monolith for strangler-fig development ----------
+  legacy:
+    profiles: [legacy]
+    build: { context: ../legacy/fleetai_dash/nextjs_space }
+    environment:
+      DATABASE_URL: postgresql://fleetai:fleetai@postgres:5432/legacy
+      NEXTAUTH_URL: http://localhost:3001
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set in .env}
+    ports: ["3002:3000"]
+    depends_on: { postgres: { condition: service_healthy } }
+
+volumes:
+  pgdata: {}
+  redpanda: {}
+  redis: {}
+  minio: {}

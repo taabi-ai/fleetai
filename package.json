@@ -1,0 +1,29 @@
+{
+  "name": "fleetai-platform",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
+    "prisma:generate": "turbo run prisma:generate",
+    "infra:up": "docker compose -f infra/docker-compose.dev.yml up -d",
+    "infra:down": "docker compose -f infra/docker-compose.dev.yml down",
+    "infra:reset": "docker compose -f infra/docker-compose.dev.yml down -v",
+    "infra:topics": "docker compose -f infra/docker-compose.dev.yml exec redpanda /bin/sh /scripts/create-topics.sh",
+    "db:migrate": "turbo run prisma:migrate",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6",
+    "turbo": "^2.10.12"
+  }
+}

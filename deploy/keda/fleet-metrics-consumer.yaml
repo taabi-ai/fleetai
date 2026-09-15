@@ -1,0 +1,24 @@
+# deploy/keda/fleet-metrics-consumer.yaml — standalone KEDA ScaledObject
+# (the Helm chart also renders this via the fleetai-service library chart if the
+# umbrella chart is used; this file is a reference for plain-manifest deploys).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: fleet-metrics-consumer
+  namespace: fleetai
+spec:
+  scaleTargetRef:
+    name: fleet-metrics-consumer
+  minReplicaCount: 1
+  maxReplicaCount: 12
+  cooldownPeriod: 120
+  pollingInterval: 15
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: redpanda-0.redpanda.messaging:9093
+        consumerGroup: fleet-metrics.telemetry
+        lagThreshold: "1000"
+        activationLagThreshold: "100"
+        tls: "false"
+        topic: telemetry.position.received

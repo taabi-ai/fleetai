@@ -1,0 +1,85 @@
+apiVersion: v2
+name: fleetai
+description: FleetAI Platform umbrella chart — web, gateway, ingest-api, 9 services and workers.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+# Per-service sub-charts are aliases of the fleetai-service library chart,
+# enabled via the services.<name>.enabled value (see values-dev.yaml).
+dependencies:
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.web.enabled
+    alias: web
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.gateway.enabled
+    alias: gateway
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.ingest-api.enabled
+    alias: ingest-api
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.identity.enabled
+    alias: identity
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.dashboard.enabled
+    alias: dashboard
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.fleet-metrics.enabled
+    alias: fleet-metrics
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.ai.enabled
+    alias: ai
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.platform-config.enabled
+    alias: platform-config
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.notification.enabled
+    alias: notification
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.media.enabled
+    alias: media
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.training.enabled
+    alias: training
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.engineering.enabled
+    alias: engineering
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.fleet-metrics-consumer.enabled
+    alias: fleet-metrics-consumer
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.notification-worker.enabled
+    alias: notification-worker
+  - name: fleetai-service
+    version: 1.0.0
+    repository: file://./charts/fleetai-service
+    condition: services.ai-worker.enabled
+    alias: ai-worker

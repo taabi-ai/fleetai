@@ -1,0 +1,19 @@
+# deploy/keda/ai-worker.yaml — scale ai-worker on pgmq queue depth.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: ai-worker
+  namespace: fleetai
+spec:
+  scaleTargetRef:
+    name: ai-worker
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  cooldownPeriod: 120
+  pollingInterval: 15
+  triggers:
+    - type: postgresql
+      metadata:
+        connection: "$(DATABASE_URL)"
+        query: "select coalesce(sum(queue_length),0) from pgmq.metrics_all()"
+        targetQueryValue: "50"

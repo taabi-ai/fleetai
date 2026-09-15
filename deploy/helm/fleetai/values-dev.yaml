@@ -1,0 +1,192 @@
+# deploy/helm/fleetai/values-dev.yaml — dev cluster values.
+global:
+  environment: dev
+  imageRegistry: ghcr.io/taabi-ai/fleetai
+  imagePullSecrets: [ghcr-pull]
+  domain: fleetdash.dev.example.com
+  otel:
+    endpoint: http://otel-collector.observability:4317
+    samplingRatio: 1.0   # dev: trace everything
+  kafka:
+    brokers: redpanda-0.redpanda.messaging:9093
+    tls: false
+  redis:
+    url: redis://redis.cache:6379
+  identity:
+    jwksUrl: http://identity.fleetai:4001/.well-known/jwks.json
+  internalHmacSecretRef: { name: fleetai-internal, key: hmac }
+
+services:
+  web:
+    enabled: true
+    name: web
+    image: { repository: web, tag: dev }
+    port: 3000
+    replicas: { min: 1, max: 3 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    env:
+      NEXT_PUBLIC_API_BASE_URL: http://fleetdash.dev.example.com
+    envFromSecrets: [{ name: web-auth }]
+    probes:
+      liveness: { path: /health/live }
+      readiness: { path: /health/ready }
+
+  gateway:
+    enabled: true
+    name: gateway
+    image: { repository: gateway, tag: dev }
+    port: 4000
+    replicas: { min: 2, max: 5 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    env:
+      LEGACY_URL: http://legacy.legacy:3000
+      SERVICE_URL_IDENTITY: http://identity.fleetai:4001
+      SERVICE_URL_DASHBOARD: http://dashboard.fleetai:4002
+      SERVICE_URL_FLEET_METRICS: http://fleet-metrics.fleetai:4003
+      SERVICE_URL_AI: http://ai.fleetai:4004
+      SERVICE_URL_PLATFORM_CONFIG: http://platform-config.fleetai:4005
+      SERVICE_URL_NOTIFICATION: http://notification.fleetai:4006
+      SERVICE_URL_MEDIA: http://media.fleetai:4007
+      SERVICE_URL_TRAINING: http://training.fleetai:4008
+      SERVICE_URL_ENGINEERING: http://engineering.fleetai:4009
+    envFromSecrets: [{ name: fleetai-internal }]
+
+  identity:
+    enabled: true
+    name: identity
+    image: { repository: identity, tag: dev }
+    port: 4001
+    replicas: { min: 2, max: 5 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    migration: { enabled: true, command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"] }
+    envFromSecrets: [{ name: identity-db }]
+
+  dashboard:
+    enabled: true
+    name: dashboard
+    image: { repository: dashboard, tag: dev }
+    port: 4002
+    replicas: { min: 2, max: 5 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    migration: { enabled: true, command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"] }
+    envFromSecrets: [{ name: dashboard-db }]
+
+  fleet-metrics:
+    enabled: true
+    name: fleet-metrics
+    image: { repository: fleet-metrics, tag: dev }
+    port: 4003
+    replicas: { min: 2, max: 10 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    migration: { enabled: true, command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"] }
+    envFromSecrets: [{ name: fleet-metrics-db }]
+
+  fleet-metrics-consumer:
+    enabled: true
+    name: fleet-metrics-consumer
+    image: { repository: fleet-metrics, tag: dev }
+    command: ["node", "dist/main.js", "--role=consumer"]
+    port: 4003
+    replicas: { min: 1, max: 12 }
+    autoscaling:
+      type: keda-kafka
+      consumerGroup: fleet-metrics.telemetry
+      topics: [telemetry.position.received, telemetry.trip.completed, telemetry.adas.detected]
+      lagThreshold: 1000
+      activationLagThreshold: 100
+    envFromSecrets: [{ name: fleet-metrics-db }]
+
+  ai:
+    enabled: true
+    name: ai
+    image: { repository: ai, tag: dev }
+    port: 4004
+    replicas: { min: 1, max: 5 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    migration: { enabled: true, command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"] }
+    envFromSecrets: [{ name: ai-db }]
+
+  ai-worker:
+    enabled: true
+    name: ai-worker
+    image: { repository: ai, tag: dev }
+    command: ["node", "dist/main.js", "--role=worker"]
+    port: 4004
+    replicas: { min: 0, max: 5 }
+    autoscaling:
+      type: keda-postgres
+      connectionString: "$(DATABASE_URL)"
+      query: "select coalesce(sum(queue_length),0) from pgmq.metrics_all()"
+      targetQueryValue: 50
+    envFromSecrets: [{ name: ai-db }]
+
+  platform-config:
+    enabled: true
+    name: platform-config
+    image: { repository: platform-config, tag: dev }
+    port: 4005
+    replicas: { min: 1, max: 3 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    migration: { enabled: true, command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"] }
+    envFromSecrets: [{ name: platform-config-db }]
+
+  notification:
+    enabled: true
+    name: notification
+    image: { repository: notification, tag: dev }
+    port: 4006
+    replicas: { min: 1, max: 3 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    migration: { enabled: true, command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"] }
+    envFromSecrets: [{ name: notification-db }]
+
+  notification-worker:
+    enabled: true
+    name: notification-worker
+    image: { repository: notification, tag: dev }
+    command: ["node", "dist/main.js", "--role=worker"]
+    port: 4006
+    replicas: { min: 0, max: 5 }
+    autoscaling:
+      type: keda-postgres
+      connectionString: "$(DATABASE_URL)"
+      query: "select coalesce(sum(queue_length),0) from pgmq.metrics_all()"
+      targetQueryValue: 50
+    envFromSecrets: [{ name: notification-db }]
+
+  media:
+    enabled: true
+    name: media
+    image: { repository: media, tag: dev }
+    port: 4007
+    replicas: { min: 1, max: 3 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    migration: { enabled: true, command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"] }
+    envFromSecrets: [{ name: media-db }, { name: media-storage }]
+
+  training:
+    enabled: true
+    name: training
+    image: { repository: training, tag: dev }
+    port: 4008
+    replicas: { min: 1, max: 3 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    migration: { enabled: true, command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"] }
+    envFromSecrets: [{ name: training-db }]
+
+  engineering:
+    enabled: true
+    name: engineering
+    image: { repository: engineering, tag: dev }
+    port: 4009
+    replicas: { min: 1, max: 3 }
+    autoscaling: { type: hpa, cpuUtilization: 70 }
+    migration: { enabled: true, command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"] }
+    envFromSecrets: [{ name: engineering-db }]
+
+devDependencies:
+  enabled: true
+  postgres: { image: timescale/timescaledb-ha:pg17, storage: 20Gi }
+  redpanda: { replicas: 1, storage: 20Gi }
+  redis: { architecture: standalone }
+  minio: { mode: standalone, storage: 50Gi }

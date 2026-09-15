@@ -1,0 +1,378 @@
+# apps/gateway/routes.yaml — every legacy /api/* route with a strangler-fig flag.
+# Flag: legacy | shadow | service
+#   legacy  -> proxy to LEGACY_URL (the running monolith)
+#   shadow  -> proxy to legacy AND asynchronously replay to the service, diff, log
+#   service -> proxy to the owning service (adds x-fleetai-internal + x-fleetai-principal)
+# Generated from docs/migration/06-REFERENCE/01-route-to-service-map.md (keep in sync).
+
+routes:
+  # --- identity ---
+  - path: "/api/auth/[...nextauth]"
+    methods: [GET, POST]
+    service: identity
+    servicePath: /auth/nextauth
+    flag: legacy
+    public: true
+  - path: /api/auth/login
+    methods: [POST]
+    service: identity
+    servicePath: /auth/login
+    flag: legacy
+    public: true
+  - path: /api/signup
+    methods: [POST]
+    service: identity
+    servicePath: /users/signup
+    flag: legacy
+    public: true
+  - path: /api/admin/users
+    methods: [GET, POST]
+    service: identity
+    servicePath: /users
+    flag: legacy
+    permission: admin.users
+  - path: "/api/admin/users/[id]"
+    methods: [PATCH, DELETE]
+    service: identity
+    servicePath: /users/:id
+    flag: legacy
+    permission: admin.users
+  - path: /api/admin/roles
+    methods: [GET, POST]
+    service: identity
+    servicePath: /roles
+    flag: legacy
+    permission: admin.roles
+  - path: "/api/admin/roles/[name]"
+    methods: [PATCH, DELETE]
+    service: identity
+    servicePath: /roles/:name
+    flag: legacy
+    permission: admin.roles
+  - path: /api/user/ai-pin
+    methods: [GET, POST, DELETE]
+    service: identity
+    servicePath: /me/ai-pin
+    flag: legacy
+  - path: /api/user/ai-pin/verify
+    methods: [POST, DELETE]
+    service: identity
+    servicePath: /me/ai-pin/verify
+    flag: legacy
+
+  # --- dashboard ---
+  - path: /api/dashboard
+    methods: [GET, POST]
+    service: dashboard
+    servicePath: /dashboards
+    flag: legacy
+    permission: dashboards.view
+  - path: "/api/dashboard/[id]"
+    methods: [GET, PATCH, DELETE]
+    service: dashboard
+    servicePath: /dashboards/:id
+    flag: legacy
+    permission: dashboards.view
+  - path: "/api/dashboard/[id]/share"
+    methods: [GET, POST, DELETE]
+    service: dashboard
+    servicePath: /dashboards/:id/shares
+    flag: legacy
+    permission: dashboards.collaborate
+  - path: "/api/dashboard/[id]/widgets"
+    methods: [POST, PUT]
+    service: dashboard
+    servicePath: /dashboards/:id/widgets
+    flag: legacy
+    permission: dashboards.edit
+  - path: "/api/dashboard/[id]/widgets/[widgetId]"
+    methods: [PATCH, DELETE]
+    service: dashboard
+    servicePath: /dashboards/:id/widgets/:wid
+    flag: legacy
+    permission: dashboards.edit
+  - path: "/api/dashboard/[id]/widgets/[widgetId]/lock"
+    methods: [POST, DELETE]
+    service: dashboard
+    servicePath: /dashboards/:id/widgets/:wid/lock
+    flag: legacy
+    permission: dashboards.edit
+  - path: /api/dashboard/presets
+    methods: [POST]
+    service: dashboard
+    servicePath: /dashboards/presets
+    flag: legacy
+    permission: dashboards.edit
+  - path: /api/library
+    methods: [GET, POST]
+    service: dashboard
+    servicePath: /library
+    flag: legacy
+    permission: library.publish
+  - path: "/api/library/[id]"
+    methods: [DELETE]
+    service: dashboard
+    servicePath: /library/:id
+    flag: legacy
+    permission: library.publish
+  - path: "/api/library/[id]/use"
+    methods: [POST]
+    service: dashboard
+    servicePath: /library/:id/use
+    flag: legacy
+  - path: /api/marketplace
+    methods: [GET]
+    service: dashboard
+    servicePath: /marketplace
+    flag: legacy
+    public: true
+  - path: "/api/marketplace/[id]/clone"
+    methods: [POST]
+    service: dashboard
+    servicePath: /marketplace/:id/clone
+    flag: legacy
+
+  # --- fleet-metrics ---
+  - path: /api/widgets/data
+    methods: [POST]
+    service: fleet-metrics
+    servicePath: /internal/metrics/resolve
+    flag: legacy
+    permission: dashboards.view
+
+  # --- ai ---
+  - path: /api/ai/generate-widget
+    methods: [POST]
+    service: ai
+    servicePath: /ai/widgets
+    flag: legacy
+    permission: ai.use
+  - path: /api/admin/llm-providers
+    methods: [GET, POST]
+    service: ai
+    servicePath: /llm-providers
+    flag: legacy
+    permission: admin.settings
+  - path: "/api/admin/llm-providers/[id]"
+    methods: [PATCH, DELETE, POST]
+    service: ai
+    servicePath: /llm-providers/:id
+    flag: legacy
+    permission: admin.settings
+  - path: /api/admin/mcp-servers
+    methods: [GET, POST]
+    service: ai
+    servicePath: /mcp-servers
+    flag: legacy
+    permission: admin.settings
+  - path: "/api/admin/mcp-servers/[id]"
+    methods: [PATCH, DELETE, POST]
+    service: ai
+    servicePath: /mcp-servers/:id
+    flag: legacy
+    permission: admin.settings
+  - path: /api/mcp-servers
+    methods: [GET]
+    service: ai
+    servicePath: /mcp-servers
+    flag: legacy
+  - path: /api/usage/me
+    methods: [GET, POST]
+    service: ai
+    servicePath: /usage/me
+    flag: legacy
+  - path: /api/admin/usage
+    methods: [GET, PUT]
+    service: ai
+    servicePath: /admin/usage
+    flag: legacy
+    permission: admin.settings
+  - path: "/api/admin/usage/[userId]"
+    methods: [GET, PATCH, POST]
+    service: ai
+    servicePath: /admin/usage/:userId
+    flag: legacy
+    permission: admin.settings
+  - path: /api/admin/credit-requests
+    methods: [GET, PATCH]
+    service: ai
+    servicePath: /admin/credit-requests
+    flag: legacy
+    permission: admin.settings
+
+  # --- platform-config ---
+  - path: /api/admin/env
+    methods: [GET, PUT, DELETE]
+    service: platform-config
+    servicePath: /admin/env
+    flag: legacy
+    permission: admin.settings
+  - path: /api/admin/integrations
+    methods: [GET]
+    service: platform-config
+    servicePath: /admin/integrations
+    flag: legacy
+    permission: admin.integrations
+  - path: "/api/admin/integrations/[key]"
+    methods: [PUT, POST, DELETE]
+    service: platform-config
+    servicePath: /admin/integrations/:key
+    flag: legacy
+    permission: admin.integrations
+  - path: /api/admin/smtp
+    methods: [GET, PUT, POST, DELETE]
+    service: platform-config
+    servicePath: /admin/smtp
+    flag: legacy
+    permission: admin.settings
+  - path: /api/admin/menu
+    methods: [GET, POST]
+    service: platform-config
+    servicePath: /admin/menu
+    flag: legacy
+    permission: admin.settings
+  - path: "/api/admin/menu/[id]"
+    methods: [PATCH, DELETE]
+    service: platform-config
+    servicePath: /admin/menu/:id
+    flag: legacy
+    permission: admin.settings
+  - path: /api/menu
+    methods: [GET]
+    service: platform-config
+    servicePath: /menu
+    flag: legacy
+  - path: /api/admin/audit
+    methods: [GET]
+    service: platform-config
+    servicePath: /admin/audit
+    flag: legacy
+    permission: admin.settings
+  - path: /api/admin/system
+    methods: [GET]
+    service: platform-config
+    servicePath: /admin/system
+    flag: legacy
+    permission: admin.settings
+
+  # --- media ---
+  - path: /api/admin/storage
+    methods: [GET, POST]
+    service: media
+    servicePath: /admin/storage
+    flag: legacy
+    permission: admin.settings
+  - path: /api/media
+    methods: [GET, POST]
+    service: media
+    servicePath: /media
+    flag: legacy
+    permission: media.manage
+  - path: "/api/media/[id]"
+    methods: [GET, PATCH, DELETE]
+    service: media
+    servicePath: /media/:id
+    flag: legacy
+    permission: media.manage
+  - path: /api/media/complete
+    methods: [POST]
+    service: media
+    servicePath: /media/complete
+    flag: legacy
+    permission: media.manage
+  - path: /api/media/multipart/initiate
+    methods: [POST]
+    service: media
+    servicePath: /media/multipart/initiate
+    flag: legacy
+    permission: media.manage
+  - path: /api/media/multipart/part
+    methods: [POST]
+    service: media
+    servicePath: /media/multipart/part
+    flag: legacy
+    permission: media.manage
+  - path: /api/media/multipart/complete
+    methods: [POST]
+    service: media
+    servicePath: /media/multipart/complete
+    flag: legacy
+    permission: media.manage
+
+  # --- notification ---
+  - path: /api/notifications
+    methods: [GET, PATCH, DELETE]
+    service: notification
+    servicePath: /notifications
+    flag: legacy
+
+  # --- training ---
+  - path: /api/training
+    methods: [GET]
+    service: training
+    servicePath: /training
+    flag: legacy
+    public: true
+  - path: "/api/training/[slug]"
+    methods: [GET]
+    service: training
+    servicePath: /training/:slug
+    flag: legacy
+    public: true
+  - path: /api/training/progress
+    methods: [POST]
+    service: training
+    servicePath: /training/progress
+    flag: legacy
+  - path: /api/admin/training
+    methods: [GET, POST]
+    service: training
+    servicePath: /admin/training
+    flag: legacy
+    permission: training.manage
+  - path: "/api/admin/training/[id]"
+    methods: [PATCH, DELETE]
+    service: training
+    servicePath: /admin/training/:id
+    flag: legacy
+    permission: training.manage
+  - path: "/api/admin/training/[id]/lessons"
+    methods: [POST]
+    service: training
+    servicePath: /admin/training/:id/lessons
+    flag: legacy
+    permission: training.manage
+  - path: "/api/admin/training/lessons/[lessonId]"
+    methods: [PATCH, DELETE]
+    service: training
+    servicePath: /admin/training/lessons/:id
+    flag: legacy
+    permission: training.manage
+
+  # --- engineering ---
+  - path: /api/dora/events
+    methods: [GET, POST]
+    service: engineering
+    servicePath: /dora/events
+    flag: legacy
+    public: true
+  - path: /api/engineering/plane
+    methods: [GET]
+    service: engineering
+    servicePath: /engineering/plane
+    flag: legacy
+    permission: dora.view
+  - path: /api/sales/overview
+    methods: [GET]
+    service: engineering
+    servicePath: /sales/overview
+    flag: legacy
+    permission: crm.view
+
+  # --- gateway-owned ---
+  - path: /api/health
+    methods: [GET]
+    service: gateway
+    servicePath: /health
+    flag: gateway
+    public: true

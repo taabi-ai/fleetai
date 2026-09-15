@@ -1,0 +1,29 @@
+{
+  "name": "@fleetai/service-template",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "vitest run test/integration"
+  },
+  "devDependencies": {
+    "@fleetai/tsconfig": "workspace:*",
+    "@types/node": "^26.5.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  },
+  "dependencies": {
+    "@fleetai/config": "workspace:*",
+    "@fleetai/nest-common": "workspace:*",
+    "@fleetai/observability": "workspace:*",
+    "fastify": "^5.12.4",
+    "zod": "^4.6.5"
+  }
+}

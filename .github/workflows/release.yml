@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch: {}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_REPO: taabi-ai/fleetai
+
+jobs:
+  build-and-push:
+    name: Build + push service images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workspace:
+          - { name: web, pkg: '@fleetai/web' }
+          - { name: gateway, pkg: '@fleetai/gateway' }
+          - { name: ingest-api, pkg: '@fleetai/ingest-api' }
+          - { name: identity, pkg: '@fleetai/identity' }
+          - { name: dashboard, pkg: '@fleetai/dashboard' }
+          - { name: fleet-metrics, pkg: '@fleetai/fleet-metrics' }
+          - { name: ai, pkg: '@fleetai/ai' }
+          - { name: platform-config, pkg: '@fleetai/platform-config' }
+          - { name: notification, pkg: '@fleetai/notification' }
+          - { name: media, pkg: '@fleetai/media' }
+          - { name: training, pkg: '@fleetai/training' }
+          - { name: engineering, pkg: '@fleetai/engineering' }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Set image tag
+        id: tag
+        run: echo "tag=$(echo ${GITHUB_REF##*/} | sed 's/v//')-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build image
+        run: |
+          docker build -f "${{ matrix.workspace.name }}/Dockerfile" \
+            --build-arg WORKSPACE="${{ matrix.workspace.pkg }}" \
+            -t "$REGISTRY/$IMAGE_REPO/${{ matrix.workspace.name }}:${{ steps.tag.outputs.tag }}" \
+            -t "$REGISTRY/$IMAGE_REPO/${{ matrix.workspace.name }}:latest" .
+        shell: bash
+
+      - name: Login to Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        run: |
+          docker push "$REGISTRY/$IMAGE_REPO/${{ matrix.workspace.name }}:${{ steps.tag.outputs.tag }}"
+          docker push "$REGISTRY/$IMAGE_REPO/${{ matrix.workspace.name }}:latest"
+
+      - name: Update Helm values (bot PR)
+        run: |
+          sed -i "s|tag: dev|tag: ${{ steps.tag.outputs.tag }}|" deploy/helm/fleetai/values-dev.yaml
+          git config user.name "fleetai-bot"
+          git config user.email "bot@fleetai.local"
+          git add deploy/helm/fleetai/values-dev.yaml
+          git commit -m "chore(helm): bump ${{ matrix.workspace.name }} image tag" || true
+          git push origin HEAD:auto/helm-bump-${{ matrix.workspace.name }} || true

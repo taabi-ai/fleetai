@@ -1,0 +1,111 @@
+# deploy/helm/fleetai-platform/values-<env>.yaml — example for one service entry.
+# The library chart `fleetai-service` renders Deployment/Service/HPA|ScaledObject/PDB/NetworkPolicy/
+# ServiceMonitor/migration Job from this shape. Repeat the `services.<name>` block per deployable.
+
+global:
+  environment: staging
+  imageRegistry: ghcr.io/taabi-ai/fleetai
+  imagePullSecrets: [ghcr-pull]
+  domain: fleetdash.example.com
+  otel:
+    endpoint: http://otel-collector.observability:4317
+    samplingRatio: 0.1
+  kafka:
+    brokers: redpanda-0.redpanda.messaging:9093
+    tls: true
+  redis:
+    url: rediss://redis.cache:6380
+  identity:
+    jwksUrl: http://identity.fleetai:4001/.well-known/jwks.json
+  internalHmacSecretRef: { name: fleetai-internal, key: hmac }
+  networkPolicy:
+    enabled: true
+    defaultDeny: true
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 25m
+  hosts:
+    - host: fleetdash.example.com
+      paths:
+        - { path: /,        service: web,        port: 3000 }
+        - { path: /api,     service: gateway,    port: 4000 }
+        - { path: /ingest,  service: ingest-api, port: 4013 }
+  tls:
+    - secretName: fleetdash-tls
+      hosts: [fleetdash.example.com]
+
+services:
+  fleet-metrics:
+    enabled: true
+    image: { repository: fleet-metrics, tag: "" }   # tag injected by CI (git sha)
+    port: 4003
+    replicas: { min: 2, max: 10 }
+    resources:
+      requests: { cpu: 250m, memory: 384Mi }
+      limits:   { cpu: "1",  memory: 768Mi }
+    autoscaling:
+      type: hpa                    # hpa | keda-kafka | keda-postgres | none
+      cpuUtilization: 70
+      requestsPerSecondPerPod: 150 # via prometheus adapter metric http_requests_per_second
+    migration:
+      enabled: true                # pre-upgrade Job: prisma migrate deploy
+      command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
+    env:
+      SERVICE_NAME: fleet-metrics
+      LOG_LEVEL: info
+      WEATHER_CACHE_TTL_SEC: "600"
+    envFromSecrets:
+      - name: fleet-metrics-db     # DATABASE_URL
+      - name: fleet-metrics-weather# WEATHER_API_KEY
+    externalSecrets:               # External Secrets Operator (optional)
+      enabled: true
+      storeRef: { name: azure-keyvault, kind: ClusterSecretStore }
+      keys:
+        - { secretName: fleet-metrics-db, remoteKey: fleetai-staging-fleet-metrics-database-url, property: DATABASE_URL }
+    pdb: { minAvailable: 1 }
+    probes:
+      liveness:  { path: /health/live,  initialDelaySeconds: 10 }
+      readiness: { path: /health/ready, initialDelaySeconds: 15 }
+    serviceMonitor: { enabled: true, path: /metrics }
+    networkPolicy:
+      ingressFrom: [gateway, dashboard]        # who may call this service
+      egressTo: [postgres, redpanda, redis, otel-collector, internet-weather-api]
+
+  fleet-metrics-consumer:           # same image, different command: only runs Kafka consumers
+    enabled: true
+    image: { repository: fleet-metrics, tag: "" }
+    command: ["node", "dist/main.js", "--role=consumer"]
+    replicas: { min: 1, max: 12 }
+    autoscaling:
+      type: keda-kafka
+      consumerGroup: fleet-metrics.telemetry
+      topics: [telemetry.position.received, telemetry.trip.completed, telemetry.adas.detected]
+      lagThreshold: 1000
+      activationLagThreshold: 100
+    resources:
+      requests: { cpu: 200m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+    envFromSecrets: [{ name: fleet-metrics-db }]
+
+  notification-worker:
+    enabled: true
+    image: { repository: notification, tag: "" }
+    command: ["node", "dist/main.js", "--role=worker"]
+    replicas: { min: 0, max: 5 }   # scale-to-zero allowed
+    autoscaling:
+      type: keda-postgres
+      query: "select coalesce(sum(queue_length),0) from pgmq.metrics_all()"
+      targetQueryValue: 50
+    envFromSecrets: [{ name: notification-db }]
+
+# Dev-cluster only stateful dependencies (never enable in prod; use managed services)
+devDependencies:
+  enabled: false
+  postgres:  { image: timescale/timescaledb-ha:pg17, storage: 20Gi }
+  redpanda:  { replicas: 1, storage: 20Gi }
+  redis:     { architecture: standalone }
+  minio:     { mode: standalone, storage: 50Gi }

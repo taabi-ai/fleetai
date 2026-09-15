@@ -1,0 +1,12 @@
+node_modules
+.next
+.build
+.yarn/cache
+.yarn/install-state.gz
+.env
+.env.*
+*.log
+.git
+Dockerfile
+.dockerignore
+tsconfig.tsbuildinfo

@@ -1,0 +1,32 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "title": "Postgres",
+  "uid": "postgres",
+  "version": 1,
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "title": "Connections vs max",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "pg_stat_activity_count", "legendFormat": "connections" },
+        { "expr": "pg_settings_max_connections", "legendFormat": "max" }
+      ]
+    },
+    {
+      "title": "Slow queries (mean > 1s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{ "expr": "rate(pg_stat_statements_total_ms{mean_ms>1000}[5m])", "legendFormat": "{{query}}" }]
+    },
+    {
+      "title": "fleet_metrics hypertable chunk stats",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "targets": [{ "expr": "timescaledb_chunks_total", "legendFormat": "chunks" }]
+    }
+  ]
+}

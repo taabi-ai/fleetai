@@ -1,0 +1,159 @@
+# infra/redpanda/topics.yaml — topic list (partitions, retention) applied by `pnpm infra:topics`
+# Partitions: telemetry.* 12, fleet.* 6, others 3. Retention 7d except audit 30d.
+# `*.dlq` topics exist for every consumer group (poison messages).
+
+events:
+  - name: audit.entry.recorded
+    partitions: 3
+    retention_ms: 2592000000   # 30 days
+    cleanup: delete
+  - name: audit.entry.recorded.dlq
+    partitions: 3
+    retention_ms: 2592000000
+    cleanup: delete
+
+  - name: identity.user.created
+    partitions: 3
+    retention_ms: 604800000    # 7 days
+  - name: identity.user.updated
+    partitions: 3
+    retention_ms: 604800000
+  - name: identity.user.deleted
+    partitions: 3
+    retention_ms: 604800000
+  - name: identity.role.updated
+    partitions: 3
+    retention_ms: 604800000
+  - name: identity.login.succeeded
+    partitions: 3
+    retention_ms: 604800000
+  - name: identity.login.failed
+    partitions: 3
+    retention_ms: 604800000
+  - name: identity.quota.exhausted
+    partitions: 3
+    retention_ms: 604800000
+
+  - name: dashboard.created
+    partitions: 3
+    retention_ms: 604800000
+  - name: dashboard.updated
+    partitions: 3
+    retention_ms: 604800000
+  - name: dashboard.deleted
+    partitions: 3
+    retention_ms: 604800000
+  - name: dashboard.widget.created
+    partitions: 3
+    retention_ms: 604800000
+  - name: dashboard.widget.updated
+    partitions: 3
+    retention_ms: 604800000
+  - name: dashboard.widget.deleted
+    partitions: 3
+    retention_ms: 604800000
+  - name: dashboard.shared
+    partitions: 3
+    retention_ms: 604800000
+
+  - name: fleet.trip.completed
+    partitions: 6
+    retention_ms: 604800000
+  - name: fleet.alert.raised
+    partitions: 6
+    retention_ms: 604800000
+  - name: fleet.alert.acknowledged
+    partitions: 6
+    retention_ms: 604800000
+  - name: fleet.daily-stat.recomputed
+    partitions: 6
+    retention_ms: 604800000
+  - name: fleet.vehicle.updated
+    partitions: 6
+    retention_ms: 604800000
+
+  - name: telemetry.vehicle.position
+    partitions: 12
+    retention_ms: 604800000
+  - name: telemetry.vehicle.event
+    partitions: 12
+    retention_ms: 604800000
+  - name: telemetry.charging.session
+    partitions: 12
+    retention_ms: 604800000
+
+  - name: ai.job.completed
+    partitions: 3
+    retention_ms: 604800000
+  - name: ai.job.failed
+    partitions: 3
+    retention_ms: 604800000
+  - name: ai.usage.recorded
+    partitions: 3
+    retention_ms: 604800000
+  - name: ai.quota.exhausted
+    partitions: 3
+    retention_ms: 604800000
+  - name: ai.widget.generated
+    partitions: 3
+    retention_ms: 604800000
+  - name: ai.provider.updated
+    partitions: 3
+    retention_ms: 604800000
+  - name: ai.mcp-server.updated
+    partitions: 3
+    retention_ms: 604800000
+
+  - name: config.changed
+    partitions: 3
+    retention_ms: 604800000
+  - name: config.env.updated
+    partitions: 3
+    retention_ms: 604800000
+  - name: config.integration.updated
+    partitions: 3
+    retention_ms: 604800000
+
+  - name: notification.sent
+    partitions: 3
+    retention_ms: 604800000
+  - name: notification.email.failed
+    partitions: 3
+    retention_ms: 604800000
+
+  - name: media.asset.created
+    partitions: 3
+    retention_ms: 604800000
+  - name: media.asset.deleted
+    partitions: 3
+    retention_ms: 604800000
+
+  - name: training.module.published
+    partitions: 3
+    retention_ms: 604800000
+  - name: training.lesson.deleted
+    partitions: 3
+    retention_ms: 604800000
+  - name: training.progress.completed
+    partitions: 3
+    retention_ms: 604800000
+
+  - name: engineering.dora.event.received
+    partitions: 3
+    retention_ms: 604800000
+
+  - name: fleetai.system.gateway.route-flag-changed
+    partitions: 3
+    retention_ms: 604800000
+
+# DLQ topics for every consumer group
+dlq_suffix: .dlq
+dlq_groups:
+  - audit-store
+  - notification-consumers
+  - engineering-consumers
+  - dashboard-consumers
+  - fleet-metrics-consumers
+  - ai-consumers
+  - training-consumers
+  - media-consumers

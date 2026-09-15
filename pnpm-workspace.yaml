@@ -1,0 +1,11 @@
+packages:
+  - 'apps/*'
+  - 'services/*'
+  - 'packages/*'
+
+# pnpm 11: allow build scripts for these packages (was pnpm.onlyBuiltDependencies in package.json).
+allowBuilds:
+  es5-ext: true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true

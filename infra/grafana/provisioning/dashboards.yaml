@@ -1,0 +1,13 @@
+// infra/grafana/provisioning/dashboards.yaml
+// Loads the dashboards in infra/grafana/dashboards on `pnpm infra:up`.
+apiVersion: 1
+
+providers:
+  - name: fleetai
+    orgId: 1
+    folder: FleetAI
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /otel-lgtm/grafana/dashboards

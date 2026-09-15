@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1.7
+# Generic multi-stage Dockerfile for any workspace in the monorepo.
+# Build from repo root:
+#   docker build -f services/<name>/Dockerfile --build-arg WORKSPACE=@fleetai/<name> -t fleetai/<name>:dev .
+
+ARG NODE_VERSION=24.21.0
+ARG WORKSPACE
+
+# ---------- base ----------
+FROM node:${NODE_VERSION}-alpine AS base
+RUN corepack enable && corepack prepare pnpm@11.18.0 --activate
+WORKDIR /repo
+
+# ---------- prune workspace (turbo prune keeps only needed packages) ----------
+FROM base AS pruner
+ARG WORKSPACE
+COPY . .
+RUN pnpm dlx turbo@2 prune ${WORKSPACE} --docker
+
+# ---------- install deps ----------
+FROM base AS deps
+COPY --from=pruner /repo/out/json/ .
+COPY --from=pruner /repo/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ---------- build ----------
+FROM deps AS build
+ARG WORKSPACE
+COPY --from=pruner /repo/out/full/ .
+# prisma client (no-op for workspaces without prisma)
+RUN pnpm --filter ${WORKSPACE} exec sh -c 'test -f prisma/schema.prisma && prisma generate || true'
+RUN pnpm turbo run build --filter=${WORKSPACE}
+RUN pnpm --filter ${WORKSPACE} deploy --prod /out
+
+# ---------- runtime ----------
+FROM node:${NODE_VERSION}-alpine AS runtime
+RUN apk add --no-cache tini && addgroup -S app && adduser -S app -G app
+WORKDIR /app
+ENV NODE_ENV=production \
+    NODE_OPTIONS="--max-old-space-size=512 --enable-source-maps"
+COPY --from=build --chown=app:app /out .
+USER app
+EXPOSE 4000
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:${PORT:-4000}/health/live || exit 1
+ENTRYPOINT ["/sbin/tini","--"]
+CMD ["node","dist/main.js"]

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fleetai.taabi.co/events/fleet.trip.completed/v1.json",
+  "title": "fleet.trip.completed v1",
+  "description": "Emitted by fleet-metrics when a trip reaches status=completed. Key = tripId. Consumers: notification (alerts read model), dashboard (cache invalidation), platform-config (audit).",
+  "type": "object",
+  "required": ["eventId", "type", "version", "occurredAt", "producer", "key", "payload"],
+  "properties": {
+    "eventId":    { "type": "string", "format": "uuid" },
+    "type":       { "const": "fleet.trip.completed" },
+    "version":    { "const": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "producer":   { "const": "fleet-metrics" },
+    "key":        { "type": "string", "description": "Kafka partition key = tripId" },
+    "traceparent":{ "type": "string", "description": "W3C trace context of the originating request" },
+    "payload": {
+      "type": "object",
+      "required": ["tripId", "vehicleCode", "driverId", "routeId", "status", "distanceKm", "startedAt", "endedAt"],
+      "properties": {
+        "tripId":       { "type": "string" },
+        "vehicleCode":  { "type": "string", "examples": ["V-0042"] },
+        "driverId":     { "type": "string" },
+        "routeId":      { "type": "string" },
+        "region":       { "type": "string" },
+        "carrier":      { "type": "string" },
+        "status":       { "const": "completed" },
+        "distanceKm":   { "type": "number", "minimum": 0 },
+        "fuelLitres":   { "type": ["number", "null"] },
+        "energyKwh":    { "type": ["number", "null"] },
+        "startedAt":    { "type": "string", "format": "date-time" },
+        "endedAt":      { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "x-fleetai": {
+    "topic": "fleet.trip.completed",
+    "partitions": 6,
+    "retentionDays": 7,
+    "compatibility": "BACKWARD",
+    "zodSource": "packages/events/src/fleet/trip-completed.v1.ts"
+  }
+}

@@ -1,0 +1,34 @@
+# KEDA ScaledObject for kafka-lag and postgres-queue consumers.
+{{- if and .Values.enabled (ne .Values.autoscaling.type "hpa") (ne .Values.autoscaling.type "none") }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "fleetai.fullname" . }}
+spec:
+  scaleTargetRef:
+    name: {{ include "fleetai.fullname" . }}
+  minReplicaCount: {{ .Values.replicas.min | default 1 }}
+  maxReplicaCount: {{ .Values.replicas.max | default 5 }}
+  cooldownPeriod: 120
+  pollingInterval: 15
+  triggers:
+    {{- if eq .Values.autoscaling.type "keda-kafka" }}
+    - type: kafka
+      metadata:
+        bootstrapServers: {{ .Values.global.kafka.brokers | quote }}
+        consumerGroup: {{ .Values.autoscaling.consumerGroup | quote }}
+        lagThreshold: {{ .Values.autoscaling.lagThreshold | default 1000 | quote }}
+        activationLagThreshold: {{ .Values.autoscaling.activationLagThreshold | default 100 | quote }}
+        tls: {{ .Values.global.kafka.tls | default false | quote }}
+        topic: {{ first .Values.autoscaling.topics | quote }}
+      authenticationRef:
+        name: keda-kafka-tls
+    {{- end }}
+    {{- if eq .Values.autoscaling.type "keda-postgres" }}
+    - type: postgresql
+      metadata:
+        connection: {{ .Values.autoscaling.connectionString | quote }}
+        query: {{ .Values.autoscaling.query | quote }}
+        targetQueryValue: {{ .Values.autoscaling.targetQueryValue | default 50 | quote }}
+    {{- end }}
+{{- end }}

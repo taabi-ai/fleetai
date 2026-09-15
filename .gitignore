@@ -1,0 +1,14 @@
+# FleetAI Platform
+# pnpm 9 workspaces + Turborepo
+
+node_modules/
+dist/
+**/.turbo/
+*.tsbuildinfo
+.next/
+!.next/standalone
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local

@@ -8,7 +8,7 @@ ARG WORKSPACE
 
 # ---------- base ----------
 FROM node:${NODE_VERSION}-alpine AS base
-RUN corepack enable && corepack prepare pnpm@11.18.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.4.2 --activate
 WORKDIR /repo
 
 # ---------- prune workspace (turbo prune keeps only needed packages) ----------

@@ -2,9 +2,9 @@
   "name": "fleetai-platform",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@11.18.0",
+  "packageManager": "pnpm@12.4.2",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "dev": "turbo run dev --parallel",

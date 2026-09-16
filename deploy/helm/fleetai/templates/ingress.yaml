@@ -18,12 +18,12 @@ spec:
           - path: /ingest
             pathType: Prefix
             backend:
-              service: { name: ingest-api, port: { number: 4013 } }
+            service: { name: {{ printf "%s-%s" .Release.Name "ingest-api" | quote }}, port: { number: 4013 } }
           - path: /api
             pathType: Prefix
             backend:
-              service: { name: gateway, port: { number: 4000 } }
+            service: { name: {{ printf "%s-%s" .Release.Name "gateway" | quote }}, port: { number: 4000 } }
           - path: /
             pathType: Prefix
             backend:
-              service: { name: web, port: { number: 3000 } }
+            service: { name: {{ printf "%s-%s" .Release.Name "web" | quote }}, port: { number: 3000 } }

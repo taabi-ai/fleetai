@@ -33,7 +33,7 @@ spec:
               value: {{ .Values.global.otel.samplingRatio | default 0.1 | quote }}
           envFrom:
             {{- range .Values.envFromSecrets }}
-            - secretRef: { name: {{ . }} }
+            - secretRef: { name: {{ .name }} }
             {{- end }}
           resources:
             requests: {{ toYaml .Values.resources.requests | nindent 14 }}

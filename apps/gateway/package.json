@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@fleetai/tsconfig": "workspace:*",
-    "@types/node": "^26.5.1",
+    "@types/node": "^24.0.0",
     "fastify": "^5.0.0",
     "fastify-plugin": "^6.0.0",
     "jose": "^6.2.12",

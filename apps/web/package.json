@@ -104,7 +104,7 @@
   },
   "devDependencies": {
     "@fleetai/tsconfig": "workspace:*",
-    "@types/node": "^26.5.1",
+    "@types/node": "^24.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@typescript-eslint/eslint-plugin": "8.70.0",
@@ -117,6 +117,6 @@
     "typescript": "^7.0.2"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.0.0"
   }
 }

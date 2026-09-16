@@ -1,0 +1,40 @@
+# Local overrides for a kind cluster.  Load locally-built images into kind as
+# `fleetai/<service>:dev`; no image registry or pull secret is required.
+global:
+  environment: local
+  imageRegistry: fleetai
+  imagePullSecrets: []
+  domain: fleetai.localhost
+
+# Start only images that can be built from the current repository.  Enable
+# additional services once their image and required backing dependencies exist.
+services:
+  web:
+    enabled: true
+    image: { repository: web, tag: dev }
+    replicas: { min: 1, max: 1 }
+    envFromSecrets: []
+  gateway:
+    enabled: true
+    image: { repository: gateway, tag: dev }
+    replicas: { min: 1, max: 1 }
+    envFromSecrets: []
+  ingest-api: { enabled: false }
+  identity: { enabled: false }
+  dashboard: { enabled: false }
+  fleet-metrics: { enabled: false }
+  fleet-metrics-consumer: { enabled: false }
+  ai: { enabled: false }
+  ai-worker: { enabled: false }
+  platform-config: { enabled: false }
+  notification: { enabled: false }
+  notification-worker: { enabled: false }
+  media: { enabled: false }
+  training: { enabled: false }
+  engineering: { enabled: false }
+
+# Redpanda, PostgreSQL, Redis, and MinIO are intentionally not installed by
+# this application chart. Run them via infra/docker-compose.dev.yml until
+# dedicated Kubernetes dependency charts are added.
+devDependencies:
+  enabled: false

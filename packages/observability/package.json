@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@fleetai/tsconfig": "workspace:*",
-    "@types/node": "^26.5.1",
+    "@types/node": "^24.0.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
   }
